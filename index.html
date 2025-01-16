@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer & Supplier Project Management</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+    
+        #app {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+    
+        #auth-container, #main-app {
+            margin-bottom: 20px;
+        }
+    
+        input, textarea {
+            display: block;
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: calc(100% - 22px);
+        }
+    
+        button {
+            background-color: #5cb85c;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+    
+        button:hover {
+            background-color: #4cae4c;
+        }
+    
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    
+        .project-item {
+            background: #f9f9f9;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #5cb85c;
+        }
+    
+        .project-item h3 {
+            margin-top: 0;
+        }
+    
+        #search-results div {
+            padding: 10px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        #edit-modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+    
+        #edit-modal .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="auth-container">
+            <h2>Login / Signup</h2>
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Login</button>
+            <button id="signup-btn">Signup</button>
+            <div id="auth-error" class="error"></div>
+        </div>
+        <div id="main-app" style="display: none;">
+            <button id="logout-btn">Logout</button>
+            <h2>PO</h2>
+            <div id="project-list"></div>
+            <h2>Add New PO</h2>
+            <form id="add-project-form">
+                <input type="text" id="customer-name" placeholder="Customer Name" required>
+                <textarea id="project-info" placeholder="PO Information" required></textarea>
+                <input type="text" id="supplier-name" placeholder="Supplier Name" required>
+                <button type="submit">Add PO</button>
+            </form>
+            <h2>Search PO</h2>
+            <input type="text" id="search-input" placeholder="Search...">
+            <div id="search-results"></div>
+        </div>
+        <div id="edit-modal" style="display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+            <div style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%;">
+                <span id="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+                <h2>Edit Purchase Order</h2>
+                <form id="edit-project-form">
+                    <input type="hidden" id="edit-project-id">
+                    <input type="text" id="edit-customer-name" placeholder="Customer Name" required>
+                    <textarea id="edit-project-info" placeholder="Purchase Order Information" required></textarea>
+                    <input type="text" id="edit-supplier-name" placeholder="Supplier Name" required>
+                    <button type="submit">Update Purchase Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, orderBy, serverTimestamp, doc, deleteDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+ // Your web app's Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyCysHx6eoQcljo8_B2wbg4mlv8nFHIYBKk",
+    authDomain: "custandsupp.firebaseapp.com",
+    projectId: "custandsupp",
+    storageBucket: "custandsupp.firebasestorage.app",
+    messagingSenderId: "1013364359143",
+    appId: "1:1013364359143:web:a30acd373c506a619a0742"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const authContainer = document.getElementById('auth-container');
+const mainApp = document.getElementById('main-app');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const loginBtn = document.getElementById('login-btn');
+const signupBtn = document.getElementById('signup-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const authError = document.getElementById('auth-error');
+const projectList = document.getElementById('project-list');
+const addProjectForm = document.getElementById('add-project-form');
+const customerNameInput = document.getElementById('customer-name');
+const projectInfoInput = document.getElementById('project-info');
+const supplierNameInput = document.getElementById('supplier-name');
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+const editModal = document.getElementById('edit-modal');
+const closeModal = document.getElementById('close-modal');
+const editProjectForm = document.getElementById('edit-project-form');
+const editProjectIdInput = document.getElementById('edit-project-id');
+const editCustomerNameInput = document.getElementById('edit-customer-name');
+const editProjectInfoInput = document.getElementById('edit-project-info');
+const editSupplierNameInput = document.getElementById('edit-supplier-name');
+
+// Authentication state listener
+onAuthStateChanged(auth, user => {
+    if (user) {
+        authContainer.style.display = 'none';
+        mainApp.style.display = 'block';
+        loadProjects();
+    } else {
+        authContainer.style.display = 'block';
+        mainApp.style.display = 'none';
+    }
+});
+
+// Login
+loginBtn.addEventListener('click', async () => {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        authError.textContent = error.message;
+    }
+});
+
+// Signup
+signupBtn.addEventListener('click', async () => {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    try {
+        await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        authError.textContent = error.message;
+    }
+});
+
+// Logout
+logoutBtn.addEventListener('click', async () => {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error("Logout error:", error);
+    }
+});
+
+// Load projects from Firestore
+async function loadProjects() {
+    projectList.innerHTML = '';
+    try {
+        const querySnapshot = await getDocs(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+        querySnapshot.forEach(async doc => {
+            const project = doc.data();
+            const projectItem = document.createElement('div');
+            projectItem.classList.add('project-item');
+            // Format the date
+            const date = project.createdAt ? project.createdAt.toDate() : null;
+            const formattedDate = date ? date.toLocaleDateString() : 'N/A';
+            projectItem.innerHTML = `
+                <h3>${project.customerName}</h3>
+                <p><strong>Info:</strong> ${project.projectInfo}</p>
+                <p><strong>Supplier:</strong> ${project.supplierName}</p>
+                <p><strong>Status:</strong> ${project.status}</p>
+                <p><strong>Created At:</strong> ${formattedDate}</p>
+                <button data-id="${doc.id}" class="edit-btn">Edit</button>
+                <button data-id="${doc.id}" class="delete-btn">Delete</button>
+            `;
+            projectList.appendChild(projectItem);
+        });
+    } catch (error) {
+        console.error("Error loading projects:", error);
+    }
+}
+
+
+// Add new project
+addProjectForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const customerName = customerNameInput.value;
+    const projectInfo = projectInfoInput.value;
+    const supplierName = supplierNameInput.value;
+    try {
+        await addDoc(collection(db, 'projects'), {
+            customerName: customerName,
+            projectInfo: projectInfo,
+            supplierName: supplierName,
+            status: 'request for a quote',
+            createdAt: serverTimestamp()
+        });
+        addProjectForm.reset();
+        loadProjects();
+    } catch (error) {
+        console.error("Error adding project:", error);
+    }
+});
+
+// Project editing (basic implementation, needs modal/form)
+projectList.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('edit-btn')) {
+        const projectId = e.target.dataset.id;
+        // Implement edit functionality (e.g., open a modal with a form)
+        const projectDoc = await getDoc(doc(db, 'projects', projectId));
+        if (projectDoc.exists()) {
+            const projectData = projectDoc.data();
+            editProjectIdInput.value = projectId;
+            editCustomerNameInput.value = projectData.customerName;
+            editProjectInfoInput.value = projectData.projectInfo;
+            editSupplierNameInput.value = projectData.supplierName;
+            editModal.style.display = 'block';
+        }
+    }
+    if (e.target.classList.contains('delete-btn')) {
+        const projectId = e.target.dataset.id;
+        try {
+            await deleteDoc(doc(db, 'projects', projectId));
+            loadProjects();
+        } catch (error) {
+            console.error("Error deleting project:", error);
+        }
+    }
+});
+
+
+closeModal.addEventListener('click', () => {
+    editModal.style.display = 'none';
+});
+
+editProjectForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const projectId = editProjectIdInput.value;
+    const customerName = editCustomerNameInput.value;
+    const projectInfo = editProjectInfoInput.value;
+    const supplierName = editSupplierNameInput.value;
+    try {
+        await updateDoc(doc(db, 'projects', projectId), {
+            customerName: customerName,
+            projectInfo: projectInfo,
+            supplierName: supplierName
+        });
+        editModal.style.display = 'none';
+        loadProjects();
+    } catch (error) {
+        console.error("Error updating project:", error);
+    }
+});
+
+// Search functionality
+searchInput.addEventListener('input', async () => {
+    const searchTerm = searchInput.value.toLowerCase();
+    searchResults.innerHTML = '';
+    if (searchTerm) {
+        try {
+            const querySnapshot = await getDocs(collection(db, 'projects'));
+            querySnapshot.forEach(doc => {
+                const project = doc.data();
+                if (project.customerName.toLowerCase().includes(searchTerm) ||
+                    project.projectInfo.toLowerCase().includes(searchTerm) ||
+                    project.supplierName.toLowerCase().includes(searchTerm)) {
+                    const searchItem = document.createElement('div');
+                    const date = project.createdAt ? project.createdAt.toDate() : null;
+                    const formattedDate = date ? date.toLocaleDateString() : 'N/A';
+                    searchItem.innerHTML = `
+                        <h3>${project.customerName}</h3>
+                        <p><strong>Info:</strong> ${project.projectInfo}</p>
+                        <p><strong>Supplier:</strong> ${project.supplierName}</p>
+                        <p><strong>Status:</strong> ${project.status}</p>
+                        <p><strong>Created At:</strong> ${formattedDate}</p>
+                    `;
+                    searchResults.appendChild(searchItem);
+                }
+            });
+        } catch (error) {
+            console.error("Error searching projects:", error);
+        }
+    }
+});
+    </script>
+</body>
+</html>
