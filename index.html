@@ -133,8 +133,8 @@
         // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, orderBy, serverTimestamp, doc, deleteDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
- // Your web app's Firebase configuration
+import { getFirestore, collection, addDoc, getDocs, orderBy, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+  // Your web app's Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCysHx6eoQcljo8_B2wbg4mlv8nFHIYBKk",
     authDomain: "custandsupp.firebaseapp.com",
@@ -219,30 +219,33 @@ logoutBtn.addEventListener('click', async () => {
 async function loadProjects() {
     projectList.innerHTML = '';
     try {
-        const querySnapshot = await getDocs(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-        querySnapshot.forEach(async doc => {
-            const project = doc.data();
-            const projectItem = document.createElement('div');
-            projectItem.classList.add('project-item');
-            // Format the date
-            const date = project.createdAt ? project.createdAt.toDate() : null;
-            const formattedDate = date ? date.toLocaleDateString() : 'N/A';
-            projectItem.innerHTML = `
-                <h3>${project.customerName}</h3>
-                <p><strong>Info:</strong> ${project.projectInfo}</p>
-                <p><strong>Supplier:</strong> ${project.supplierName}</p>
-                <p><strong>Status:</strong> ${project.status}</p>
-                <p><strong>Created At:</strong> ${formattedDate}</p>
-                <button data-id="${doc.id}" class="edit-btn">Edit</button>
-                <button data-id="${doc.id}" class="delete-btn">Delete</button>
-            `;
-            projectList.appendChild(projectItem);
-        });
+        const user = auth.currentUser;
+        if (user) {
+            const q = query(collection(db, 'projects'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach(doc => {
+                const project = doc.data();
+                const projectItem = document.createElement('div');
+                projectItem.classList.add('project-item');
+                // Format the date
+                const date = project.createdAt ? project.createdAt.toDate() : null;
+                const formattedDate = date ? date.toLocaleDateString() : 'N/A';
+                projectItem.innerHTML = `
+                    <h3>${project.customerName}</h3>
+                    <p><strong>Info:</strong> ${project.projectInfo}</p>
+                    <p><strong>Supplier:</strong> ${project.supplierName}</p>
+                    <p><strong>Status:</strong> ${project.status}</p>
+                    <p><strong>Created At:</strong> ${formattedDate}</p>
+                    <button data-id="${doc.id}" class="edit-btn">Edit</button>
+                    <button data-id="${doc.id}" class="delete-btn">Delete</button>
+                `;
+                projectList.appendChild(projectItem);
+            });
+        }
     } catch (error) {
         console.error("Error loading projects:", error);
     }
 }
-
 
 // Add new project
 addProjectForm.addEventListener('submit', async (e) => {
@@ -250,20 +253,25 @@ addProjectForm.addEventListener('submit', async (e) => {
     const customerName = customerNameInput.value;
     const projectInfo = projectInfoInput.value;
     const supplierName = supplierNameInput.value;
-    try {
-        await addDoc(collection(db, 'projects'), {
-            customerName: customerName,
-            projectInfo: projectInfo,
-            supplierName: supplierName,
-            status: 'request for a quote',
-            createdAt: serverTimestamp()
-        });
-        addProjectForm.reset();
-        loadProjects();
-    } catch (error) {
-        console.error("Error adding project:", error);
+    const user = auth.currentUser;
+    if (user) {
+        try {
+            await addDoc(collection(db, 'projects'), {
+                customerName: customerName,
+                projectInfo: projectInfo,
+                supplierName: supplierName,
+                status: 'request for a quote',
+                createdAt: serverTimestamp(),
+                userId: user.uid
+            });
+            addProjectForm.reset();
+            loadProjects();
+        } catch (error) {
+            console.error("Error adding project:", error);
+        }
     }
 });
+
 
 // Project editing (basic implementation, needs modal/form)
 projectList.addEventListener('click', async (e) => {
@@ -321,25 +329,29 @@ searchInput.addEventListener('input', async () => {
     searchResults.innerHTML = '';
     if (searchTerm) {
         try {
-            const querySnapshot = await getDocs(collection(db, 'projects'));
-            querySnapshot.forEach(doc => {
-                const project = doc.data();
-                if (project.customerName.toLowerCase().includes(searchTerm) ||
-                    project.projectInfo.toLowerCase().includes(searchTerm) ||
-                    project.supplierName.toLowerCase().includes(searchTerm)) {
-                    const searchItem = document.createElement('div');
-                    const date = project.createdAt ? project.createdAt.toDate() : null;
-                    const formattedDate = date ? date.toLocaleDateString() : 'N/A';
-                    searchItem.innerHTML = `
-                        <h3>${project.customerName}</h3>
-                        <p><strong>Info:</strong> ${project.projectInfo}</p>
-                        <p><strong>Supplier:</strong> ${project.supplierName}</p>
-                        <p><strong>Status:</strong> ${project.status}</p>
-                        <p><strong>Created At:</strong> ${formattedDate}</p>
-                    `;
-                    searchResults.appendChild(searchItem);
-                }
-            });
+            const user = auth.currentUser;
+            if (user) {
+                const q = query(collection(db, 'projects'), where('userId', '==', user.uid));
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach(doc => {
+                    const project = doc.data();
+                    if (project.customerName.toLowerCase().includes(searchTerm) ||
+                        project.projectInfo.toLowerCase().includes(searchTerm) ||
+                        project.supplierName.toLowerCase().includes(searchTerm)) {
+                        const searchItem = document.createElement('div');
+                        const date = project.createdAt ? project.createdAt.toDate() : null;
+                        const formattedDate = date ? date.toLocaleDateString() : 'N/A';
+                        searchItem.innerHTML = `
+                            <h3>${project.customerName}</h3>
+                            <p><strong>Info:</strong> ${project.projectInfo}</p>
+                            <p><strong>Supplier:</strong> ${project.supplierName}</p>
+                            <p><strong>Status:</strong> ${project.status}</p>
+                            <p><strong>Created At:</strong> ${formattedDate}</p>
+                        `;
+                        searchResults.appendChild(searchItem);
+                    }
+                });
+            }
         } catch (error) {
             console.error("Error searching projects:", error);
         }
