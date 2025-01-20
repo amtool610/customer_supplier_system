@@ -102,16 +102,17 @@
         </div>
         <div id="main-app" style="display: none;">
             <button id="logout-btn">Logout</button>
-            <h2>PO</h2>
+            <h2>Purchase Orders</h2>
             <div id="project-list"></div>
-            <h2>Add New PO</h2>
+            <h2>Add New Purchase Order</h2>
             <form id="add-project-form">
                 <input type="text" id="customer-name" placeholder="Customer Name" required>
-                <textarea id="project-info" placeholder="PO Information" required></textarea>
+                <textarea id="project-info" placeholder="Purchase Order Information" required></textarea>
                 <input type="text" id="supplier-name" placeholder="Supplier Name" required>
-                <button type="submit">Add PO</button>
+                <input type="text" id="status" placeholder="Status" required>
+                <button type="submit">Add Purchase Order</button>
             </form>
-            <h2>Search PO</h2>
+            <h2>Search Purchase Orders</h2>
             <input type="text" id="search-input" placeholder="Search...">
             <div id="search-results"></div>
         </div>
@@ -124,6 +125,7 @@
                     <input type="text" id="edit-customer-name" placeholder="Customer Name" required>
                     <textarea id="edit-project-info" placeholder="Purchase Order Information" required></textarea>
                     <input type="text" id="edit-supplier-name" placeholder="Supplier Name" required>
+                    <input type="text" id="edit-status" placeholder="Status" required>
                     <button type="submit">Update Purchase Order</button>
                 </form>
             </div>
@@ -162,6 +164,7 @@ const addProjectForm = document.getElementById('add-project-form');
 const customerNameInput = document.getElementById('customer-name');
 const projectInfoInput = document.getElementById('project-info');
 const supplierNameInput = document.getElementById('supplier-name');
+const statusInput = document.getElementById('status');
 const searchInput = document.getElementById('search-input');
 const searchResults = document.getElementById('search-results');
 const editModal = document.getElementById('edit-modal');
@@ -171,6 +174,7 @@ const editProjectIdInput = document.getElementById('edit-project-id');
 const editCustomerNameInput = document.getElementById('edit-customer-name');
 const editProjectInfoInput = document.getElementById('edit-project-info');
 const editSupplierNameInput = document.getElementById('edit-supplier-name');
+const editStatusInput = document.getElementById('edit-status');
 
 // Authentication state listener
 onAuthStateChanged(auth, user => {
@@ -253,6 +257,7 @@ addProjectForm.addEventListener('submit', async (e) => {
     const customerName = customerNameInput.value;
     const projectInfo = projectInfoInput.value;
     const supplierName = supplierNameInput.value;
+    const status = statusInput.value;
     const user = auth.currentUser;
     if (user) {
         try {
@@ -260,7 +265,7 @@ addProjectForm.addEventListener('submit', async (e) => {
                 customerName: customerName,
                 projectInfo: projectInfo,
                 supplierName: supplierName,
-                status: 'request for a quote',
+                status: status,
                 createdAt: serverTimestamp(),
                 userId: user.uid
             });
@@ -271,7 +276,6 @@ addProjectForm.addEventListener('submit', async (e) => {
         }
     }
 });
-
 
 // Project editing (basic implementation, needs modal/form)
 projectList.addEventListener('click', async (e) => {
@@ -285,20 +289,22 @@ projectList.addEventListener('click', async (e) => {
             editCustomerNameInput.value = projectData.customerName;
             editProjectInfoInput.value = projectData.projectInfo;
             editSupplierNameInput.value = projectData.supplierName;
+            editStatusInput.value = projectData.status;
             editModal.style.display = 'block';
         }
     }
     if (e.target.classList.contains('delete-btn')) {
         const projectId = e.target.dataset.id;
-        try {
-            await deleteDoc(doc(db, 'projects', projectId));
-            loadProjects();
-        } catch (error) {
-            console.error("Error deleting project:", error);
+        if (confirm("Are you sure you want to delete this purchase order?")) {
+            try {
+                await deleteDoc(doc(db, 'projects', projectId));
+                loadProjects();
+            } catch (error) {
+                console.error("Error deleting project:", error);
+            }
         }
     }
 });
-
 
 closeModal.addEventListener('click', () => {
     editModal.style.display = 'none';
@@ -310,11 +316,13 @@ editProjectForm.addEventListener('submit', async (e) => {
     const customerName = editCustomerNameInput.value;
     const projectInfo = editProjectInfoInput.value;
     const supplierName = editSupplierNameInput.value;
+    const status = editStatusInput.value;
     try {
         await updateDoc(doc(db, 'projects', projectId), {
             customerName: customerName,
             projectInfo: projectInfo,
-            supplierName: supplierName
+            supplierName: supplierName,
+            status: status
         });
         editModal.style.display = 'none';
         loadProjects();
@@ -337,7 +345,8 @@ searchInput.addEventListener('input', async () => {
                     const project = doc.data();
                     if (project.customerName.toLowerCase().includes(searchTerm) ||
                         project.projectInfo.toLowerCase().includes(searchTerm) ||
-                        project.supplierName.toLowerCase().includes(searchTerm)) {
+                        project.supplierName.toLowerCase().includes(searchTerm) ||
+                        project.status.toLowerCase().includes(searchTerm)) {
                         const searchItem = document.createElement('div');
                         const date = project.createdAt ? project.createdAt.toDate() : null;
                         const formattedDate = date ? date.toLocaleDateString() : 'N/A';
