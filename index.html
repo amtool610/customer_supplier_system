@@ -6,69 +6,93 @@
     <title>Customer & Supplier Project Management</title>
     <style>
         body {
-            font-family: sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
             color: #333;
+            line-height: 1.6;
         }
-    
+
         #app {
-            max-width: 800px;
-            margin: auto;
-            background: white;
-            padding: 20px;
+            max-width: 900px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-    
-        #auth-container, #main-app {
+
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
             margin-bottom: 20px;
         }
-    
+
+        #auth-container, #main-app, #log-container {
+            margin-bottom: 30px;
+        }
+
         input, textarea {
             display: block;
-            margin-bottom: 10px;
-            padding: 8px;
+            margin-bottom: 15px;
+            padding: 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            width: calc(100% - 22px);
+            width: calc(100% - 24px);
+            box-sizing: border-box;
+            font-size: 1em;
         }
-    
+
         button {
-            background-color: #5cb85c;
+            background-color: #3498db;
             color: white;
-            padding: 10px 15px;
+            padding: 12px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            margin-right: 5px;
+            margin-right: 10px;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
         }
-    
+
         button:hover {
-            background-color: #4cae4c;
+            background-color: #2980b9;
         }
-    
+
         .error {
-            color: red;
+            color: #e74c3c;
             margin-top: 10px;
+            font-size: 0.9em;
         }
-    
+
         .project-item {
             background: #f9f9f9;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-left: 4px solid #5cb85c;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
-    
+
         .project-item h3 {
             margin-top: 0;
+            color: #2c3e50;
         }
-    
+
+        .project-item p {
+            margin-bottom: 8px;
+        }
+
         #search-results div {
-            padding: 10px;
-            margin-bottom: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
             border-bottom: 1px solid #eee;
+            background: #f9f9f9;
+            border-radius: 4px;
         }
+
         #edit-modal {
             display: none;
             position: fixed;
@@ -80,13 +104,51 @@
             overflow: auto;
             background-color: rgba(0,0,0,0.4);
         }
-    
+
         #edit-modal .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 25px;
             border: 1px solid #888;
             width: 80%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        #edit-modal .modal-content h2 {
+            margin-top: 0;
+        }
+
+        #edit-modal .modal-content span {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        #log-container {
+            margin: 20px;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        #log-list div {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.95em;
+            color: #555;
+        }
+        #log-list div:last-child {
+            border-bottom: none;
+        }
+        #open-log-btn, #close-log-btn {
+            background-color: #2ecc71;
+        }
+        #open-log-btn:hover, #close-log-btn:hover {
+            background-color: #27ae60;
         }
     </style>
 </head>
@@ -115,6 +177,7 @@
             <h2>Search Purchase Orders</h2>
             <input type="text" id="search-input" placeholder="Search...">
             <div id="search-results"></div>
+            <button id="open-log-btn">Open Log</button>
         </div>
         <div id="edit-modal" style="display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
             <div style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%;">
@@ -129,6 +192,11 @@
                     <button type="submit">Update Purchase Order</button>
                 </form>
             </div>
+        </div>
+        <div id="log-container" style="display: none;">
+            <button id="close-log-btn">Close Log</button>
+            <h2>Activity Log</h2>
+            <div id="log-list"></div>
         </div>
     </div>
     <script type="module">
@@ -175,6 +243,10 @@ const editCustomerNameInput = document.getElementById('edit-customer-name');
 const editProjectInfoInput = document.getElementById('edit-project-info');
 const editSupplierNameInput = document.getElementById('edit-supplier-name');
 const editStatusInput = document.getElementById('edit-status');
+const logContainer = document.getElementById('log-container');
+const logList = document.getElementById('log-list');
+const openLogBtn = document.getElementById('open-log-btn');
+const closeLogBtn = document.getElementById('close-log-btn');
 
 // Authentication state listener
 onAuthStateChanged(auth, user => {
@@ -271,6 +343,7 @@ addProjectForm.addEventListener('submit', async (e) => {
             });
             addProjectForm.reset();
             loadProjects();
+            logActivity('Added purchase order: ' + customerName);
         } catch (error) {
             console.error("Error adding project:", error);
         }
@@ -299,6 +372,7 @@ projectList.addEventListener('click', async (e) => {
             try {
                 await deleteDoc(doc(db, 'projects', projectId));
                 loadProjects();
+                logActivity('Deleted purchase order: ' + projectId);
             } catch (error) {
                 console.error("Error deleting project:", error);
             }
@@ -318,14 +392,36 @@ editProjectForm.addEventListener('submit', async (e) => {
     const supplierName = editSupplierNameInput.value;
     const status = editStatusInput.value;
     try {
-        await updateDoc(doc(db, 'projects', projectId), {
-            customerName: customerName,
-            projectInfo: projectInfo,
-            supplierName: supplierName,
-            status: status
-        });
-        editModal.style.display = 'none';
-        loadProjects();
+        const projectDoc = await getDoc(doc(db, 'projects', projectId));
+        if (projectDoc.exists()) {
+            const oldData = projectDoc.data();
+            const changes = [];
+            if (oldData.customerName !== customerName) {
+                changes.push(`Customer Name: '${oldData.customerName}' to '${customerName}'`);
+            }
+            if (oldData.projectInfo !== projectInfo) {
+                changes.push(`Project Info: '${oldData.projectInfo}' to '${projectInfo}'`);
+            }
+            if (oldData.supplierName !== supplierName) {
+                changes.push(`Supplier Name: '${oldData.supplierName}' to '${supplierName}'`);
+            }
+             if (oldData.status !== status) {
+                changes.push(`Status: '${oldData.status}' to '${status}'`);
+            }
+            if (changes.length > 0) {
+                await updateDoc(doc(db, 'projects', projectId), {
+                    customerName: customerName,
+                    projectInfo: projectInfo,
+                    supplierName: supplierName,
+                    status: status
+                });
+                editModal.style.display = 'none';
+                loadProjects();
+                logActivity(`Updated purchase order: ${customerName}. Changes: ${changes.join(', ')}`);
+            } else {
+                editModal.style.display = 'none';
+            }
+        }
     } catch (error) {
         console.error("Error updating project:", error);
     }
@@ -365,6 +461,61 @@ searchInput.addEventListener('input', async () => {
             console.error("Error searching projects:", error);
         }
     }
+});
+
+// Function to log activity
+async function logActivity(message) {
+    const logItem = document.createElement('div');
+    const now = new Date();
+    const timestamp = now.toLocaleString();
+    logItem.textContent = `[${timestamp}] ${message}`;
+    logList.appendChild(logItem);
+
+    // Store log in Firestore
+    try {
+        await addDoc(collection(db, 'logs'), {
+            message: message,
+            timestamp: serverTimestamp(),
+            userId: auth.currentUser.uid
+        });
+    } catch (error) {
+        console.error("Error logging activity to Firestore:", error);
+    }
+}
+
+// Open log
+openLogBtn.addEventListener('click', async () => {
+    mainApp.style.display = 'none';
+    logContainer.style.display = 'block';
+    await loadLogs();
+});
+
+// Load logs from Firestore
+async function loadLogs() {
+    logList.innerHTML = '';
+    try {
+        const user = auth.currentUser;
+        if (user) {
+            const q = query(collection(db, 'logs'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach(doc => {
+                const log = doc.data();
+                const logItem = document.createElement('div');
+                const date = log.timestamp ? log.timestamp.toDate() : null;
+                const formattedDate = date ? date.toLocaleString() : 'N/A';
+                logItem.textContent = `[${formattedDate}] ${log.message}`;
+                logList.appendChild(logItem);
+            });
+        }
+    } catch (error) {
+        console.error("Error loading logs:", error);
+    }
+}
+
+// Close log
+closeLogBtn.addEventListener('click', () => {
+    logContainer.style.display = 'none';
+    mainApp.style.display = 'block';
 });
     </script>
 </body>
