@@ -84,6 +84,21 @@
         .project-item p {
             margin-bottom: 8px;
         }
+        .project-item .toggle-details-btn {
+            background-color: #2ecc71;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+
+        .project-item .toggle-details-btn:hover {
+            background-color: #27ae60;
+        }
 
         #search-results div {
             padding: 15px;
@@ -162,22 +177,28 @@
             <button id="signup-btn">Signup</button>
             <div id="auth-error" class="error"></div>
         </div>
-        
         <div id="main-app" style="display: none;">
             <button id="logout-btn">Logout</button>
- 	<h2>Search Purchase Orders</h2>
+            <h2>Search Purchase Orders</h2>
             <input type="text" id="search-input" placeholder="Search...">
             <div id="search-results"></div>
+            
+            <button id="toggle-project-list">Show Purchase Orders</button>
             <h2>Purchase Orders</h2>
             <div id="project-list"></div>
+            
             <h2>Add New Purchase Order</h2>
             <form id="add-project-form">
                 <input type="text" id="customer-name" placeholder="Customer Name" required>
                 <textarea id="project-info" placeholder="Purchase Order Information" required></textarea>
                 <input type="text" id="supplier-name" placeholder="Supplier Name" required>
                 <input type="text" id="status" placeholder="Status" required>
+                <input type="number" id="cost" placeholder="Cost" required>
+                <input type="number" id="quote" placeholder="Quote" required>
                 <button type="submit">Add Purchase Order</button>
-            </form>  
+            </form>
+            <h2>Total Quotes: <span id="total-quotes">0</span></h2>
+            <h2>Total Earnings: <span id="total-earnings">0</span></h2>
             <button id="open-log-btn">Open Log</button>
         </div>
         <div id="edit-modal" style="display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
@@ -190,6 +211,8 @@
                     <textarea id="edit-project-info" placeholder="Purchase Order Information" required></textarea>
                     <input type="text" id="edit-supplier-name" placeholder="Supplier Name" required>
                     <input type="text" id="edit-status" placeholder="Status" required>
+                    <input type="number" id="edit-cost" placeholder="Cost" required>
+                    <input type="number" id="edit-quote" placeholder="Quote" required>
                     <button type="submit">Update Purchase Order</button>
                 </form>
             </div>
@@ -229,11 +252,14 @@ const signupBtn = document.getElementById('signup-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const authError = document.getElementById('auth-error');
 const projectList = document.getElementById('project-list');
-const addProjectForm = document.getElementById('add-project-form');
+const totalQuotesDisplay = document.getElementById('total-quotes');
+const totalEarningsDisplay = document.getElementById('total-earnings');
 const customerNameInput = document.getElementById('customer-name');
 const projectInfoInput = document.getElementById('project-info');
 const supplierNameInput = document.getElementById('supplier-name');
 const statusInput = document.getElementById('status');
+const costInput = document.getElementById('cost');
+const quoteInput = document.getElementById('quote');
 const searchInput = document.getElementById('search-input');
 const searchResults = document.getElementById('search-results');
 const editModal = document.getElementById('edit-modal');
@@ -244,10 +270,28 @@ const editCustomerNameInput = document.getElementById('edit-customer-name');
 const editProjectInfoInput = document.getElementById('edit-project-info');
 const editSupplierNameInput = document.getElementById('edit-supplier-name');
 const editStatusInput = document.getElementById('edit-status');
+const editCostInput = document.getElementById('edit-cost');
+const editQuoteInput = document.getElementById('edit-quote');
 const logContainer = document.getElementById('log-container');
 const logList = document.getElementById('log-list');
 const openLogBtn = document.getElementById('open-log-btn');
 const closeLogBtn = document.getElementById('close-log-btn');
+const addProjectForm = document.getElementById('add-project-form');
+const toggleProjectListBtn = document.getElementById('toggle-project-list');
+
+// Initially hide the project list
+projectList.style.display = 'none';
+
+// Add event listener to toggle project list visibility
+toggleProjectListBtn.addEventListener('click', () => {
+    if (projectList.style.display === 'none') {
+        projectList.style.display = 'block';
+        toggleProjectListBtn.textContent = 'Hide Purchase Orders';
+    } else {
+        projectList.style.display = 'none';
+        toggleProjectListBtn.textContent = 'Show Purchase Orders';
+    }
+});
 
 // Authentication state listener
 onAuthStateChanged(auth, user => {
@@ -295,6 +339,8 @@ logoutBtn.addEventListener('click', async () => {
 // Load projects from Firestore
 async function loadProjects() {
     projectList.innerHTML = '';
+    let totalQuotes = 0;
+    let totalEarnings = 0;
     try {
         const user = auth.currentUser;
         if (user) {
@@ -312,13 +358,19 @@ async function loadProjects() {
                     <p><strong>Info:</strong> ${project.projectInfo}</p>
                     <p><strong>Supplier:</strong> ${project.supplierName}</p>
                     <p><strong>Status:</strong> ${project.status}</p>
+                    <p><strong>Cost:</strong> ${project.cost}</p>
+                    <p><strong>Quote:</strong> ${project.quote}</p>
                     <p><strong>Created At:</strong> ${formattedDate}</p>
                     <button data-id="${doc.id}" class="edit-btn">Edit</button>
                     <button data-id="${doc.id}" class="delete-btn">Delete</button>
                 `;
                 projectList.appendChild(projectItem);
+                totalQuotes += parseFloat(project.quote || 0);
+                totalEarnings += (parseFloat(project.quote || 0) - parseFloat(project.cost || 0));
             });
         }
+        totalQuotesDisplay.textContent = totalQuotes.toFixed(2);
+        totalEarningsDisplay.textContent = totalEarnings.toFixed(2);
     } catch (error) {
         console.error("Error loading projects:", error);
     }
@@ -331,6 +383,8 @@ addProjectForm.addEventListener('submit', async (e) => {
     const projectInfo = projectInfoInput.value;
     const supplierName = supplierNameInput.value;
     const status = statusInput.value;
+    const cost = parseFloat(costInput.value) || 0;
+    const quote = parseFloat(quoteInput.value) || 0;
     const user = auth.currentUser;
     if (user) {
         try {
@@ -339,6 +393,8 @@ addProjectForm.addEventListener('submit', async (e) => {
                 projectInfo: projectInfo,
                 supplierName: supplierName,
                 status: status,
+                cost: cost,
+                quote: quote,
                 createdAt: serverTimestamp(),
                 userId: user.uid
             });
@@ -364,6 +420,8 @@ projectList.addEventListener('click', async (e) => {
             editProjectInfoInput.value = projectData.projectInfo;
             editSupplierNameInput.value = projectData.supplierName;
             editStatusInput.value = projectData.status;
+            editCostInput.value = projectData.cost;
+            editQuoteInput.value = projectData.quote;
             editModal.style.display = 'block';
         }
     }
@@ -392,6 +450,8 @@ editProjectForm.addEventListener('submit', async (e) => {
     const projectInfo = editProjectInfoInput.value;
     const supplierName = editSupplierNameInput.value;
     const status = editStatusInput.value;
+    const cost = parseFloat(editCostInput.value) || 0;
+    const quote = parseFloat(editQuoteInput.value) || 0;
     try {
         const projectDoc = await getDoc(doc(db, 'projects', projectId));
         if (projectDoc.exists()) {
@@ -409,12 +469,20 @@ editProjectForm.addEventListener('submit', async (e) => {
              if (oldData.status !== status) {
                 changes.push(`Status: '${oldData.status}' to '${status}'`);
             }
+            if (oldData.cost !== cost) {
+                changes.push(`Cost: '${oldData.cost}' to '${cost}'`);
+            }
+            if (oldData.quote !== quote) {
+                changes.push(`Quote: '${oldData.quote}' to '${quote}'`);
+            }
             if (changes.length > 0) {
                 await updateDoc(doc(db, 'projects', projectId), {
                     customerName: customerName,
                     projectInfo: projectInfo,
                     supplierName: supplierName,
-                    status: status
+                    status: status,
+                    cost: cost,
+                    quote: quote
                 });
                 editModal.style.display = 'none';
                 loadProjects();
