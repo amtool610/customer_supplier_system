@@ -165,6 +165,116 @@
         #open-log-btn:hover, #close-log-btn:hover {
             background-color: #27ae60;
         }
+
+        @media screen and (min-width: 768px) {
+            #project-list, #urgent-list, #outsource-list, #archive-list {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                padding: 20px;
+            }
+
+            .project-item {
+                margin-bottom: 0;
+                height: auto;
+                min-height: 400px;
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                background: #f9f9f9;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                box-sizing: border-box;
+            }
+
+            #app {
+                max-width: 1600px;
+                padding: 20px;
+                margin: 0 auto;
+                width: 95%;
+                box-sizing: border-box;
+            }
+
+            #edit-modal .modal-content {
+                max-width: 800px;
+                margin: 5% auto;
+            }
+
+            #search-results {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                padding: 20px;
+            }
+
+            #chart-container, #company-chart-container {
+                max-width: 1200px;
+                margin: 30px auto;
+            }
+
+            .project-item h3 {
+                margin-top: 0;
+                margin-bottom: 15px;
+                font-size: 1.2em;
+            }
+
+            .project-item p {
+                margin: 8px 0;
+                word-break: break-word;
+                overflow-wrap: break-word;
+                font-size: 0.95em;
+            }
+
+            .project-item .button-group {
+                margin-top: auto;
+                padding-top: 15px;
+                display: flex;
+                gap: 10px;
+            }
+
+            .button-group button {
+                flex: 1;
+                padding: 8px;
+                font-size: 0.9em;
+            }
+
+            .project-item {
+                min-width: 250px;
+            }
+        }
+
+        .project-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .edit-btn, .delete-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .edit-btn {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
     </style>
 </head>
 <body>
@@ -183,23 +293,39 @@
             <input type="text" id="search-input" placeholder="Search...">
             <div id="search-results"></div>
             
+            <button id="toggle-rfq-list">Show RFQ Orders</button>
             <button id="toggle-project-list">Show Purchase Orders</button>
+            <button id="toggle-urgent-list">Show Urgent Orders</button>
+            <button id="toggle-outsource-list">Show Outsource Orders</button>
+            <button id="toggle-archive-list">Show Archived Orders</button>
             <h2>Purchase Orders</h2>
+            <div id="rfq-list" style="display: none;"></div>
             <div id="project-list"></div>
+            <div id="urgent-list" style="display: none;"></div>
+            <div id="outsource-list" style="display: none;"></div>
+            <div id="archive-list" style="display: none;"></div>
             
-            <h2>Add New Purchase Order</h2>
-            <form id="add-project-form">
-                <input type="text" id="customer-name" placeholder="Customer Name" required>
-                <textarea id="project-info" placeholder="Purchase Order Information" required></textarea>
-                <input type="text" id="supplier-name" placeholder="Supplier Name" required>
-                <input type="text" id="status" placeholder="Status" required>
-                <input type="number" id="cost" placeholder="Cost" required>
-                <input type="number" id="quote" placeholder="Quote" required>
-                <button type="submit">Add Purchase Order</button>
-            </form>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Add New Purchase Order</h2>
+                <button id="toggle-add-form" style="background-color: #3498db;">Show Add Form</button>
+            </div>
+            <div id="add-form-container" style="display: none;">
+                <form id="add-project-form">
+                    <input type="text" id="customer-name" placeholder="Customer Name" required>
+                    <input type="text" id="company-name" placeholder="Company Name" required>
+                    <textarea id="project-info" placeholder="Purchase Order Information" required></textarea>
+                    <input type="text" id="supplier-name" placeholder="Supplier Name" required>
+                    <input type="text" id="status" placeholder="Status" required>
+                    <input type="number" id="lead-time" placeholder="Lead Time (Days)" required>
+                    <input type="number" id="cost" placeholder="Cost" required>
+                    <input type="number" id="quote" placeholder="Quote" required>
+                    <button type="submit">Add Purchase Order</button>
+                </form>
+            </div>
             <h2>Total Quotes: <span id="total-quotes">0</span></h2>
             <h2>Total Earnings: <span id="total-earnings">0</span></h2>
             <button id="open-log-btn">Open Log</button>
+            <button id="update-charts-btn" style="background-color: #9b59b6;">Update Charts</button>
         </div>
         <div id="edit-modal" style="display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
             <div style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%;">
@@ -208,9 +334,11 @@
                 <form id="edit-project-form">
                     <input type="hidden" id="edit-project-id">
                     <input type="text" id="edit-customer-name" placeholder="Customer Name" required>
+                    <input type="text" id="edit-company-name" placeholder="Company Name" required>
                     <textarea id="edit-project-info" placeholder="Purchase Order Information" required></textarea>
                     <input type="text" id="edit-supplier-name" placeholder="Supplier Name" required>
                     <input type="text" id="edit-status" placeholder="Status" required>
+                    <input type="number" id="edit-lead-time" placeholder="Lead Time (Days)" required>
                     <input type="number" id="edit-cost" placeholder="Cost" required>
                     <input type="number" id="edit-quote" placeholder="Quote" required>
                     <button type="submit">Update Purchase Order</button>
@@ -226,21 +354,26 @@
             <h2>Top 10 Customers by Total Quotes</h2>
             <canvas id="customerChart"></canvas>
         </div>
+        <div id="company-chart-container" style="margin-top: 30px; margin-bottom: 30px;">
+            <h2>Top 10 Companies by Total Quotes</h2>
+            <canvas id="companyChart"></canvas>
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, orderBy, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
-  // Your web app's Firebase configuration
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, orderBy, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyCysHx6eoQcljo8_B2wbg4mlv8nFHIYBKk",
-    authDomain: "custandsupp.firebaseapp.com",
-    projectId: "custandsupp",
-    storageBucket: "custandsupp.firebasestorage.app",
-    messagingSenderId: "1013364359143",
-    appId: "1:1013364359143:web:a30acd373c506a619a0742"
+    apiKey: "AIzaSyBo1yqJQZpI0if-TtIU8rlTR-vc2TqIOtY",
+    authDomain: "companypomanager.firebaseapp.com",
+    projectId: "companypomanager",
+    storageBucket: "companypomanager.firebasestorage.app",
+    messagingSenderId: "854985488726",
+    appId: "1:854985488726:web:793123d3e84de174d17ef7"
 };
 
 // Initialize Firebase
@@ -283,6 +416,21 @@ const openLogBtn = document.getElementById('open-log-btn');
 const closeLogBtn = document.getElementById('close-log-btn');
 const addProjectForm = document.getElementById('add-project-form');
 const toggleProjectListBtn = document.getElementById('toggle-project-list');
+const toggleUrgentListBtn = document.getElementById('toggle-urgent-list');
+const urgentList = document.getElementById('urgent-list');
+const companyNameInput = document.getElementById('company-name');
+const leadTimeInput = document.getElementById('lead-time');
+const editCompanyNameInput = document.getElementById('edit-company-name');
+const editLeadTimeInput = document.getElementById('edit-lead-time');
+const toggleOutsourceListBtn = document.getElementById('toggle-outsource-list');
+const outsourceList = document.getElementById('outsource-list');
+const toggleArchiveListBtn = document.getElementById('toggle-archive-list');
+const archiveList = document.getElementById('archive-list');
+const toggleRfqListBtn = document.getElementById('toggle-rfq-list');
+const rfqList = document.getElementById('rfq-list');
+const updateChartsBtn = document.getElementById('update-charts-btn');
+const toggleAddFormBtn = document.getElementById('toggle-add-form');
+const addFormContainer = document.getElementById('add-form-container');
 
 // Initially hide the project list
 projectList.style.display = 'none';
@@ -295,6 +443,50 @@ toggleProjectListBtn.addEventListener('click', () => {
     } else {
         projectList.style.display = 'none';
         toggleProjectListBtn.textContent = 'Show Purchase Orders';
+    }
+});
+
+// Add event listener to toggle urgent list visibility
+toggleUrgentListBtn.addEventListener('click', () => {
+    if (urgentList.style.display === 'none') {
+        urgentList.style.display = 'block';
+        toggleUrgentListBtn.textContent = 'Hide Urgent Orders';
+    } else {
+        urgentList.style.display = 'none';
+        toggleUrgentListBtn.textContent = 'Show Urgent Orders';
+    }
+});
+
+// Add event listener to toggle outsource list visibility
+toggleOutsourceListBtn.addEventListener('click', () => {
+    if (outsourceList.style.display === 'none') {
+        outsourceList.style.display = 'block';
+        toggleOutsourceListBtn.textContent = 'Hide Outsource Orders';
+    } else {
+        outsourceList.style.display = 'none';
+        toggleOutsourceListBtn.textContent = 'Show Outsource Orders';
+    }
+});
+
+// Add event listener to toggle archive list visibility
+toggleArchiveListBtn.addEventListener('click', () => {
+    if (archiveList.style.display === 'none') {
+        archiveList.style.display = 'block';
+        toggleArchiveListBtn.textContent = 'Hide Archived Orders';
+    } else {
+        archiveList.style.display = 'none';
+        toggleArchiveListBtn.textContent = 'Show Archived Orders';
+    }
+});
+
+// Add event listener to toggle RFQ list visibility
+toggleRfqListBtn.addEventListener('click', () => {
+    if (rfqList.style.display === 'none') {
+        rfqList.style.display = 'block';
+        toggleRfqListBtn.textContent = 'Hide RFQ Orders';
+    } else {
+        rfqList.style.display = 'none';
+        toggleRfqListBtn.textContent = 'Show RFQ Orders';
     }
 });
 
@@ -344,6 +536,10 @@ logoutBtn.addEventListener('click', async () => {
 // Load projects from Firestore
 async function loadProjects() {
     projectList.innerHTML = '';
+    urgentList.innerHTML = '';
+    outsourceList.innerHTML = '';
+    archiveList.innerHTML = '';
+    rfqList.innerHTML = '';
     let totalQuotes = 0;
     let totalEarnings = 0;
     try {
@@ -355,28 +551,65 @@ async function loadProjects() {
                 const project = doc.data();
                 const projectItem = document.createElement('div');
                 projectItem.classList.add('project-item');
-                // Format the date
                 const date = project.createdAt ? project.createdAt.toDate() : null;
                 const formattedDate = date ? date.toLocaleDateString() : 'N/A';
-                projectItem.innerHTML = `
+                
+                const projectHTML = `
                     <h3>${project.customerName}</h3>
+                    <p><strong>Company:</strong> ${project.companyName}</p>
                     <p><strong>Info:</strong> ${project.projectInfo}</p>
                     <p><strong>Supplier:</strong> ${project.supplierName}</p>
                     <p><strong>Status:</strong> ${project.status}</p>
+                    <p><strong>Lead Time:</strong> ${project.leadTime} days</p>
                     <p><strong>Cost:</strong> ${project.cost}</p>
                     <p><strong>Quote:</strong> ${project.quote}</p>
                     <p><strong>Created At:</strong> ${formattedDate}</p>
-                    <button data-id="${doc.id}" class="edit-btn">Edit</button>
-                    <button data-id="${doc.id}" class="delete-btn">Delete</button>
+                    <div class="button-group">
+                        <button data-id="${doc.id}" class="edit-btn">Edit</button>
+                        <button data-id="${doc.id}" class="delete-btn">Delete</button>
+                    </div>
                 `;
-                projectList.appendChild(projectItem);
+                
+                projectItem.innerHTML = projectHTML;
+                
+                // Only add to purchase orders if status contains 'po'
+                if (project.status.toLowerCase().includes('po')) {
+                    projectList.appendChild(projectItem.cloneNode(true));
+                }
+
+                // Check if project is urgent (less than 7 days)
+                if (project.leadTime < 7) {
+                    urgentList.appendChild(projectItem.cloneNode(true));
+                }
+
+                // Check if project status is outsource
+                if (project.status.toLowerCase().includes('outsource')) {
+                    outsourceList.appendChild(projectItem.cloneNode(true));
+                }
+
+                // Check if project status is finished/completed
+                if (project.status.toLowerCase().includes('finished') || 
+                    project.status.toLowerCase().includes('completed')) {
+                    archiveList.appendChild(projectItem.cloneNode(true));
+                }
+
+                // Check if project status contains 'rfq'
+                if (project.status.toLowerCase().includes('rfq')) {
+                    rfqList.appendChild(projectItem.cloneNode(true));
+                }
+
                 totalQuotes += parseFloat(project.quote || 0);
                 totalEarnings += (parseFloat(project.quote || 0) - parseFloat(project.cost || 0));
             });
         }
         totalQuotesDisplay.textContent = totalQuotes.toFixed(2);
         totalEarningsDisplay.textContent = totalEarnings.toFixed(2);
-        await updateCustomerChart();
+        
+        // Make sure both charts are updated
+        await Promise.all([
+            updateCustomerChart(),
+            updateCompanyChart()
+        ]);
     } catch (error) {
         console.error("Error loading projects:", error);
     }
@@ -386,65 +619,91 @@ async function loadProjects() {
 addProjectForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const customerName = customerNameInput.value;
+    const companyName = companyNameInput.value;
     const projectInfo = projectInfoInput.value;
     const supplierName = supplierNameInput.value;
     const status = statusInput.value;
+    const leadTime = parseInt(leadTimeInput.value) || 0;
     const cost = parseFloat(costInput.value) || 0;
     const quote = parseFloat(quoteInput.value) || 0;
     const user = auth.currentUser;
     if (user) {
         try {
             await addDoc(collection(db, 'projects'), {
-                customerName: customerName,
-                projectInfo: projectInfo,
-                supplierName: supplierName,
-                status: status,
-                cost: cost,
-                quote: quote,
+                customerName,
+                companyName,
+                projectInfo,
+                supplierName,
+                status,
+                leadTime,
+                cost,
+                quote,
                 createdAt: serverTimestamp(),
                 userId: user.uid
             });
             addProjectForm.reset();
             loadProjects();
             logActivity('Added purchase order: ' + customerName);
-            await updateCustomerChart();
+            
+            // Make sure both charts are updated
+            await Promise.all([
+                updateCustomerChart(),
+                updateCompanyChart()
+            ]);
         } catch (error) {
             console.error("Error adding project:", error);
         }
     }
 });
 
-// Project editing (basic implementation, needs modal/form)
-projectList.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('edit-btn')) {
-        const projectId = e.target.dataset.id;
-        // Implement edit functionality (e.g., open a modal with a form)
-        const projectDoc = await getDoc(doc(db, 'projects', projectId));
-        if (projectDoc.exists()) {
-            const projectData = projectDoc.data();
-            editProjectIdInput.value = projectId;
-            editCustomerNameInput.value = projectData.customerName;
-            editProjectInfoInput.value = projectData.projectInfo;
-            editSupplierNameInput.value = projectData.supplierName;
-            editStatusInput.value = projectData.status;
-            editCostInput.value = projectData.cost;
-            editQuoteInput.value = projectData.quote;
-            editModal.style.display = 'block';
+// Remove the existing projectList event listener and add this function
+async function handleProjectEdit(projectId) {
+    const projectDoc = await getDoc(doc(db, 'projects', projectId));
+    if (projectDoc.exists()) {
+        const projectData = projectDoc.data();
+        editProjectIdInput.value = projectId;
+        editCustomerNameInput.value = projectData.customerName;
+        editCompanyNameInput.value = projectData.companyName;
+        editProjectInfoInput.value = projectData.projectInfo;
+        editSupplierNameInput.value = projectData.supplierName;
+        editStatusInput.value = projectData.status;
+        editLeadTimeInput.value = projectData.leadTime;
+        editCostInput.value = projectData.cost;
+        editQuoteInput.value = projectData.quote;
+        editModal.style.display = 'block';
+    }
+}
+
+async function handleProjectDelete(projectId) {
+    if (confirm("Are you sure you want to delete this purchase order?")) {
+        try {
+            await deleteDoc(doc(db, 'projects', projectId));
+            loadProjects();
+            logActivity('Deleted purchase order: ' + projectId);
+            
+            // Make sure both charts are updated
+            await Promise.all([
+                updateCustomerChart(),
+                updateCompanyChart()
+            ]);
+        } catch (error) {
+            console.error("Error deleting project:", error);
         }
     }
-    if (e.target.classList.contains('delete-btn')) {
-        const projectId = e.target.dataset.id;
-        if (confirm("Are you sure you want to delete this purchase order?")) {
-            try {
-                await deleteDoc(doc(db, 'projects', projectId));
-                loadProjects();
-                logActivity('Deleted purchase order: ' + projectId);
-                await updateCustomerChart();
-            } catch (error) {
-                console.error("Error deleting project:", error);
-            }
+}
+
+// Add click handlers for all lists
+[projectList, rfqList, urgentList, outsourceList, archiveList].forEach(list => {
+    list.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('edit-btn')) {
+            const projectId = e.target.dataset.id;
+            await handleProjectEdit(projectId);
         }
-    }
+        if (e.target.classList.contains('delete-btn')) {
+            const projectId = e.target.dataset.id;
+            await handleProjectDelete(projectId);
+        }
+    });
 });
 
 closeModal.addEventListener('click', () => {
@@ -455,9 +714,11 @@ editProjectForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const projectId = editProjectIdInput.value;
     const customerName = editCustomerNameInput.value;
+    const companyName = editCompanyNameInput.value;
     const projectInfo = editProjectInfoInput.value;
     const supplierName = editSupplierNameInput.value;
     const status = editStatusInput.value;
+    const leadTime = parseInt(editLeadTimeInput.value) || 0;
     const cost = parseFloat(editCostInput.value) || 0;
     const quote = parseFloat(editQuoteInput.value) || 0;
     try {
@@ -465,37 +726,35 @@ editProjectForm.addEventListener('submit', async (e) => {
         if (projectDoc.exists()) {
             const oldData = projectDoc.data();
             const changes = [];
-            if (oldData.customerName !== customerName) {
-                changes.push(`Customer Name: '${oldData.customerName}' to '${customerName}'`);
-            }
-            if (oldData.projectInfo !== projectInfo) {
-                changes.push(`Project Info: '${oldData.projectInfo}' to '${projectInfo}'`);
-            }
-            if (oldData.supplierName !== supplierName) {
-                changes.push(`Supplier Name: '${oldData.supplierName}' to '${supplierName}'`);
-            }
-             if (oldData.status !== status) {
-                changes.push(`Status: '${oldData.status}' to '${status}'`);
-            }
-            if (oldData.cost !== cost) {
-                changes.push(`Cost: '${oldData.cost}' to '${cost}'`);
-            }
-            if (oldData.quote !== quote) {
-                changes.push(`Quote: '${oldData.quote}' to '${quote}'`);
-            }
+            if (oldData.customerName !== customerName) changes.push(`Customer Name: '${oldData.customerName}' to '${customerName}'`);
+            if (oldData.companyName !== companyName) changes.push(`Company Name: '${oldData.companyName}' to '${companyName}'`);
+            if (oldData.projectInfo !== projectInfo) changes.push(`Project Info: '${oldData.projectInfo}' to '${projectInfo}'`);
+            if (oldData.supplierName !== supplierName) changes.push(`Supplier Name: '${oldData.supplierName}' to '${supplierName}'`);
+            if (oldData.status !== status) changes.push(`Status: '${oldData.status}' to '${status}'`);
+            if (oldData.leadTime !== leadTime) changes.push(`Lead Time: '${oldData.leadTime}' to '${leadTime}'`);
+            if (oldData.cost !== cost) changes.push(`Cost: '${oldData.cost}' to '${cost}'`);
+            if (oldData.quote !== quote) changes.push(`Quote: '${oldData.quote}' to '${quote}'`);
+            
             if (changes.length > 0) {
                 await updateDoc(doc(db, 'projects', projectId), {
-                    customerName: customerName,
-                    projectInfo: projectInfo,
-                    supplierName: supplierName,
-                    status: status,
-                    cost: cost,
-                    quote: quote
+                    customerName,
+                    companyName,
+                    projectInfo,
+                    supplierName,
+                    status,
+                    leadTime,
+                    cost,
+                    quote
                 });
                 editModal.style.display = 'none';
                 loadProjects();
                 logActivity(`Updated purchase order: ${customerName}. Changes: ${changes.join(', ')}`);
-                await updateCustomerChart();
+                
+                // Make sure both charts are updated
+                await Promise.all([
+                    updateCustomerChart(),
+                    updateCompanyChart()
+                ]);
             } else {
                 editModal.style.display = 'none';
             }
@@ -598,6 +857,7 @@ closeLogBtn.addEventListener('click', () => {
 
 // Add this after your existing variable declarations
 let customerChart = null;
+let companyChart = null;
 
 // Add this function to calculate customer totals and update chart
 async function updateCustomerChart() {
@@ -682,6 +942,117 @@ async function updateCustomerChart() {
         console.error("Error updating customer chart:", error);
     }
 }
+
+// Add this function to update company chart
+async function updateCompanyChart() {
+    try {
+        const user = auth.currentUser;
+        if (user) {
+            const q = query(collection(db, 'projects'), where('userId', '==', user.uid));
+            const querySnapshot = await getDocs(q);
+            
+            // Calculate totals per company
+            const companyTotals = {};
+            querySnapshot.forEach(doc => {
+                const project = doc.data();
+                const companyName = project.companyName;
+                // Skip if company name is undefined, null, empty, or 'Unknown'
+                if (!companyName || companyName.trim() === '' || companyName.toLowerCase() === 'unknown') {
+                    return;
+                }
+                const quote = parseFloat(project.quote) || 0;
+                
+                if (companyTotals[companyName]) {
+                    companyTotals[companyName] += quote;
+                } else {
+                    companyTotals[companyName] = quote;
+                }
+            });
+
+            // Sort and get top 10 companies
+            const sortedCompanies = Object.entries(companyTotals)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10);
+
+            const labels = sortedCompanies.map(([name]) => name);
+            const data = sortedCompanies.map(([,total]) => total);
+
+            // Destroy existing chart if it exists
+            if (companyChart) {
+                companyChart.destroy();
+            }
+
+            // Create new chart with updated data
+            const ctx = document.getElementById('companyChart').getContext('2d');
+            companyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Quotes',
+                        data: data,
+                        backgroundColor: 'rgba(46, 204, 113, 0.8)',
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Total Quote Amount'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Company Name'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Top 10 Companies by Total Quotes'
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Error updating company chart:", error);
+    }
+}
+
+// Add event listener for update charts button
+updateChartsBtn.addEventListener('click', async () => {
+    try {
+        await updateCustomerChart();
+        await updateCompanyChart();
+        logActivity('Charts manually updated');
+    } catch (error) {
+        console.error("Error updating charts:", error);
+    }
+});
+
+// Add this event listener for the add form toggle
+toggleAddFormBtn.addEventListener('click', () => {
+    if (addFormContainer.style.display === 'none') {
+        addFormContainer.style.display = 'block';
+        toggleAddFormBtn.textContent = 'Hide Add Form';
+    } else {
+        addFormContainer.style.display = 'none';
+        toggleAddFormBtn.textContent = 'Show Add Form';
+    }
+});
     </script>
 </body>
 </html>
