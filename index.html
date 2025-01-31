@@ -195,17 +195,22 @@
                 grid-template-columns: repeat(3, 1fr);
                 gap: 20px;
                 padding: 20px;
+                width: 100%;
+                box-sizing: border-box;
             }
 
             .project-item {
                 margin-bottom: 0;
                 height: 100%;
+                min-height: 350px;
                 display: flex;
                 flex-direction: column;
-            }
-
-            .project-item .button-group {
-                margin-top: auto;
+                background: #f9f9f9;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                box-sizing: border-box;
             }
 
             #app {
@@ -216,15 +221,11 @@
                 box-sizing: border-box;
             }
 
-            #edit-modal .modal-content {
-                max-width: 800px;
-                margin: 5% auto;
-            }
-
             .project-item h3 {
                 margin-top: 0;
                 margin-bottom: 15px;
                 font-size: 1.2em;
+                color: #2c3e50;
             }
 
             .project-item p {
@@ -232,6 +233,36 @@
                 word-break: break-word;
                 overflow-wrap: break-word;
                 font-size: 0.95em;
+                line-height: 1.4;
+            }
+
+            .project-item .button-group {
+                margin-top: auto;
+                padding-top: 15px;
+                display: flex;
+                gap: 10px;
+            }
+
+            .button-group button {
+                flex: 1;
+                padding: 8px 15px;
+                font-size: 0.9em;
+            }
+
+            #rfq-list, #project-list, #urgent-list, #outsource-list, #archive-list, #all-list {
+                margin-bottom: 30px;
+            }
+
+            #search-results .project-item {
+                min-height: 350px;
+            }
+
+            /* Add pagination container for items beyond 9 */
+            .pagination-container {
+                grid-column: 1 / -1;
+                display: flex;
+                justify-content: center;
+                padding: 20px 0;
             }
         }
 
@@ -286,7 +317,7 @@
             <button id="toggle-all-list">Show All Orders</button>
             <h2>Purchase Orders</h2>
             <div id="rfq-list" style="display: none;"></div>
-            <div id="project-list"></div>
+            <div id="project-list" style="display: none;"></div>
             <div id="urgent-list" style="display: none;"></div>
             <div id="outsource-list" style="display: none;"></div>
             <div id="archive-list" style="display: none;"></div>
@@ -437,7 +468,7 @@ projectList.style.display = 'none';
 // Add event listener to toggle project list visibility
 toggleProjectListBtn.addEventListener('click', () => {
     if (projectList.style.display === 'none') {
-        projectList.style.display = 'block';
+        projectList.style.display = 'grid';
         toggleProjectListBtn.textContent = 'Hide Purchase Orders';
     } else {
         projectList.style.display = 'none';
@@ -448,7 +479,7 @@ toggleProjectListBtn.addEventListener('click', () => {
 // Add event listener to toggle urgent list visibility
 toggleUrgentListBtn.addEventListener('click', () => {
     if (urgentList.style.display === 'none') {
-        urgentList.style.display = 'block';
+        urgentList.style.display = 'grid';
         toggleUrgentListBtn.textContent = 'Hide Urgent Orders';
     } else {
         urgentList.style.display = 'none';
@@ -459,7 +490,7 @@ toggleUrgentListBtn.addEventListener('click', () => {
 // Add event listener to toggle outsource list visibility
 toggleOutsourceListBtn.addEventListener('click', () => {
     if (outsourceList.style.display === 'none') {
-        outsourceList.style.display = 'block';
+        outsourceList.style.display = 'grid';
         toggleOutsourceListBtn.textContent = 'Hide Outsource Orders';
     } else {
         outsourceList.style.display = 'none';
@@ -470,7 +501,7 @@ toggleOutsourceListBtn.addEventListener('click', () => {
 // Add event listener to toggle archive list visibility
 toggleArchiveListBtn.addEventListener('click', () => {
     if (archiveList.style.display === 'none') {
-        archiveList.style.display = 'block';
+        archiveList.style.display = 'grid';
         toggleArchiveListBtn.textContent = 'Hide Archived Orders';
     } else {
         archiveList.style.display = 'none';
@@ -481,7 +512,7 @@ toggleArchiveListBtn.addEventListener('click', () => {
 // Add event listener to toggle RFQ list visibility
 toggleRfqListBtn.addEventListener('click', () => {
     if (rfqList.style.display === 'none') {
-        rfqList.style.display = 'block';
+        rfqList.style.display = 'grid';
         toggleRfqListBtn.textContent = 'Hide RFQ Orders';
     } else {
         rfqList.style.display = 'none';
@@ -492,7 +523,7 @@ toggleRfqListBtn.addEventListener('click', () => {
 // Add event listener to toggle all list visibility
 toggleAllListBtn.addEventListener('click', () => {
     if (allList.style.display === 'none') {
-        allList.style.display = 'block';
+        allList.style.display = 'grid';
         toggleAllListBtn.textContent = 'Hide All Orders';
     } else {
         allList.style.display = 'none';
