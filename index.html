@@ -222,7 +222,12 @@
             <h2>Activity Log</h2>
             <div id="log-list"></div>
         </div>
+        <div id="chart-container" style="margin-top: 30px;">
+            <h2>Top 10 Customers by Total Quotes</h2>
+            <canvas id="customerChart"></canvas>
+        </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
@@ -371,6 +376,7 @@ async function loadProjects() {
         }
         totalQuotesDisplay.textContent = totalQuotes.toFixed(2);
         totalEarningsDisplay.textContent = totalEarnings.toFixed(2);
+        await updateCustomerChart();
     } catch (error) {
         console.error("Error loading projects:", error);
     }
@@ -401,6 +407,7 @@ addProjectForm.addEventListener('submit', async (e) => {
             addProjectForm.reset();
             loadProjects();
             logActivity('Added purchase order: ' + customerName);
+            await updateCustomerChart();
         } catch (error) {
             console.error("Error adding project:", error);
         }
@@ -432,6 +439,7 @@ projectList.addEventListener('click', async (e) => {
                 await deleteDoc(doc(db, 'projects', projectId));
                 loadProjects();
                 logActivity('Deleted purchase order: ' + projectId);
+                await updateCustomerChart();
             } catch (error) {
                 console.error("Error deleting project:", error);
             }
@@ -487,6 +495,7 @@ editProjectForm.addEventListener('submit', async (e) => {
                 editModal.style.display = 'none';
                 loadProjects();
                 logActivity(`Updated purchase order: ${customerName}. Changes: ${changes.join(', ')}`);
+                await updateCustomerChart();
             } else {
                 editModal.style.display = 'none';
             }
@@ -586,6 +595,93 @@ closeLogBtn.addEventListener('click', () => {
     logContainer.style.display = 'none';
     mainApp.style.display = 'block';
 });
+
+// Add this after your existing variable declarations
+let customerChart = null;
+
+// Add this function to calculate customer totals and update chart
+async function updateCustomerChart() {
+    try {
+        const user = auth.currentUser;
+        if (user) {
+            const q = query(collection(db, 'projects'), where('userId', '==', user.uid));
+            const querySnapshot = await getDocs(q);
+            
+            // Calculate totals per customer
+            const customerTotals = {};
+            querySnapshot.forEach(doc => {
+                const project = doc.data();
+                const customerName = project.customerName;
+                const quote = parseFloat(project.quote) || 0;
+                
+                if (customerTotals[customerName]) {
+                    customerTotals[customerName] += quote;
+                } else {
+                    customerTotals[customerName] = quote;
+                }
+            });
+
+            // Sort and get top 10 customers
+            const sortedCustomers = Object.entries(customerTotals)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10);
+
+            const labels = sortedCustomers.map(([name]) => name);
+            const data = sortedCustomers.map(([,total]) => total);
+
+            // Destroy existing chart if it exists
+            if (customerChart) {
+                customerChart.destroy();
+            }
+
+            // Create new chart
+            const ctx = document.getElementById('customerChart').getContext('2d');
+            customerChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Quotes',
+                        data: data,
+                        backgroundColor: 'rgba(52, 152, 219, 0.8)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Total Quote Amount'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Customer Name'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Top 10 Customers by Total Quotes'
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Error updating customer chart:", error);
+    }
+}
     </script>
 </body>
 </html>
