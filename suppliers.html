@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supplier Dashboard - Customer & Supplier Project Management</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        #app {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        #auth-container, #main-app {
+            margin-bottom: 30px;
+        }
+
+        input, textarea {
+            display: block;
+            margin-bottom: 15px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: calc(100% - 24px);
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .error {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .supplier-card {
+            background: #f9f9f9;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 5px solid #3498db;
+        }
+
+        .supplier-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .supplier-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .supplier-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .supplier-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .jobs-container {
+            display: grid;
+            gap: 15px;
+        }
+
+        .job-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #2ecc71;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+
+        .job-item:hover {
+            transform: translateX(5px);
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .job-customer {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+
+        .job-date {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .job-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .job-detail {
+            font-size: 0.9em;
+        }
+
+        .job-detail strong {
+            color: #555;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-po {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .status-rfq {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .status-urgent {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .status-outsource {
+            background-color: #9b59b6;
+            color: white;
+        }
+
+        .status-finished {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .status-completed {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .no-jobs {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .nav-buttons {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            background-color: #2ecc71;
+        }
+
+        .nav-btn:hover {
+            background-color: #27ae60;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        #search-supplier {
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media screen and (max-width: 768px) {
+            #app {
+                margin: 10px;
+                padding: 20px;
+            }
+
+            .supplier-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .supplier-stats {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+
+            .job-details {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="auth-container">
+            <h2>Login / Signup</h2>
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Login</button>
+            <button id="signup-btn">Signup</button>
+            <div id="auth-error" class="error"></div>
+        </div>
+        
+        <div id="main-app" style="display: none;">
+            <div class="nav-buttons">
+                <button id="back-to-main" class="nav-btn">← Back to Main Dashboard</button>
+                <button id="logout-btn">Logout</button>
+            </div>
+            
+            <h2>Supplier Dashboard</h2>
+            <p>View all suppliers and their most recent 10 jobs</p>
+            
+            <div class="search-container">
+                <input type="text" id="search-supplier" placeholder="Search suppliers...">
+            </div>
+            
+            <div id="suppliers-container">
+                <div class="loading">Loading suppliers...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs, orderBy, query, where } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBo1yqJQZpI0if-TtIU8rlTR-vc2TqIOtY",
+            authDomain: "companypomanager.firebaseapp.com",
+            projectId: "companypomanager",
+            storageBucket: "companypomanager.firebasestorage.app",
+            messagingSenderId: "854985488726",
+            appId: "1:854985488726:web:793123d3e84de174d17ef7"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // DOM elements
+        const authContainer = document.getElementById('auth-container');
+        const mainApp = document.getElementById('main-app');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('login-btn');
+        const signupBtn = document.getElementById('signup-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const authError = document.getElementById('auth-error');
+        const suppliersContainer = document.getElementById('suppliers-container');
+        const searchSupplierInput = document.getElementById('search-supplier');
+        const backToMainBtn = document.getElementById('back-to-main');
+
+        // Authentication state listener
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                authContainer.style.display = 'none';
+                mainApp.style.display = 'block';
+                loadSuppliers();
+            } else {
+                authContainer.style.display = 'block';
+                mainApp.style.display = 'none';
+            }
+        });
+
+        // Login
+        loginBtn.addEventListener('click', async () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                authError.textContent = error.message;
+            }
+        });
+
+        // Signup
+        signupBtn.addEventListener('click', async () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                authError.textContent = error.message;
+            }
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Logout error:", error);
+            }
+        });
+
+        // Back to main dashboard
+        backToMainBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        // Load suppliers and their jobs
+        async function loadSuppliers() {
+            suppliersContainer.innerHTML = '<div class="loading">Loading suppliers...</div>';
+            
+            try {
+                const user = auth.currentUser;
+                if (!user) return;
+
+                const q = query(collection(db, 'projects'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+                const querySnapshot = await getDocs(q);
+                
+                // Group projects by supplier
+                const suppliers = {};
+                
+                querySnapshot.forEach(doc => {
+                    const project = doc.data();
+                    const supplierNames = (project.supplierName || 'Unknown Supplier').split(',').map(name => name.trim());
+                    
+                    // Handle multiple suppliers for the same job
+                    supplierNames.forEach(supplierName => {
+                        if (!suppliers[supplierName]) {
+                            suppliers[supplierName] = {
+                                name: supplierName,
+                                jobs: [],
+                                totalQuotes: 0,
+                                totalJobs: 0,
+                                totalEarnings: 0
+                            };
+                        }
+                        
+                        // Add the job to this supplier
+                        suppliers[supplierName].jobs.push({
+                            id: doc.id,
+                            ...project,
+                            // Store the original supplier field for reference
+                            originalSupplierField: project.supplierName
+                        });
+                        
+                        // For multiple suppliers, divide the financial values equally
+                        const numSuppliers = supplierNames.length;
+                        suppliers[supplierName].totalQuotes += parseFloat(project.quote || 0) / numSuppliers;
+                        suppliers[supplierName].totalJobs += 1;
+                        suppliers[supplierName].totalEarnings += (parseFloat(project.quote || 0) - parseFloat(project.cost || 0)) / numSuppliers;
+                    });
+                });
+
+                // Sort suppliers by most recent job date (newest to oldest)
+                const sortedSuppliers = Object.values(suppliers).sort((a, b) => {
+                    // Get the most recent job date for each supplier
+                    const aLatestJob = a.jobs.reduce((latest, job) => {
+                        const jobDate = job.createdAt ? job.createdAt.toDate() : new Date(0);
+                        return jobDate > latest ? jobDate : latest;
+                    }, new Date(0));
+                    
+                    const bLatestJob = b.jobs.reduce((latest, job) => {
+                        const jobDate = job.createdAt ? job.createdAt.toDate() : new Date(0);
+                        return jobDate > latest ? jobDate : latest;
+                    }, new Date(0));
+                    
+                    return bLatestJob - aLatestJob; // Newest first
+                });
+                
+                displaySuppliers(sortedSuppliers);
+                
+            } catch (error) {
+                console.error("Error loading suppliers:", error);
+                suppliersContainer.innerHTML = '<div class="error">Error loading suppliers. Please try again.</div>';
+            }
+        }
+
+        // Display suppliers
+        function displaySuppliers(suppliers) {
+            if (suppliers.length === 0) {
+                suppliersContainer.innerHTML = '<div class="no-jobs">No suppliers found.</div>';
+                return;
+            }
+
+            suppliersContainer.innerHTML = '';
+            
+            suppliers.forEach(supplier => {
+                const supplierCard = document.createElement('div');
+                supplierCard.classList.add('supplier-card');
+                
+                                 // Sort jobs by date (most recent first) and get most recent 10 jobs
+                 const sortedJobs = supplier.jobs.sort((a, b) => {
+                     const dateA = a.createdAt ? a.createdAt.toDate() : new Date(0);
+                     const dateB = b.createdAt ? b.createdAt.toDate() : new Date(0);
+                     return dateB - dateA; // Most recent first
+                 });
+                 const recentJobs = sortedJobs.slice(0, 10);
+                
+                const jobsHTML = recentJobs.length > 0 
+                    ? recentJobs.map(job => createJobHTML(job)).join('')
+                    : '<div class="no-jobs">No jobs found for this supplier.</div>';
+                
+                supplierCard.innerHTML = `
+                    <div class="supplier-header">
+                        <h3 class="supplier-name">${supplier.name}</h3>
+                        <div class="supplier-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">${supplier.totalJobs}</div>
+                                <div>Total Jobs</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">$${supplier.totalQuotes.toFixed(2)}</div>
+                                <div>Total Quotes</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">$${supplier.totalEarnings.toFixed(2)}</div>
+                                <div>Total Earnings</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="jobs-container">
+                        <h4>Most Recent 10 Jobs:</h4>
+                        ${jobsHTML}
+                    </div>
+                `;
+                
+                suppliersContainer.appendChild(supplierCard);
+            });
+        }
+
+                 // Create job HTML
+         function createJobHTML(job) {
+             const date = job.createdAt ? job.createdAt.toDate() : null;
+             const formattedDate = date ? date.toLocaleDateString() : 'N/A';
+             
+             const statusClass = getStatusClass(job.status);
+             
+             // Check if this job has multiple suppliers
+             const hasMultipleSuppliers = job.originalSupplierField && job.originalSupplierField.includes(',');
+             const supplierInfo = hasMultipleSuppliers 
+                 ? `<div class="job-detail"><strong>All Suppliers:</strong> ${job.originalSupplierField}</div>`
+                 : '';
+             
+             return `
+                 <div class="job-item">
+                     <div class="job-header">
+                         <div class="job-customer">${job.customerName || 'Unknown Customer'}</div>
+                         <div class="job-date">${formattedDate}</div>
+                     </div>
+                     <div class="job-details">
+                         <div class="job-detail">
+                             <strong>Company:</strong> ${job.companyName || 'N/A'}
+                         </div>
+                         <div class="job-detail">
+                             <strong>Status:</strong> 
+                             <span class="status-badge ${statusClass}">${job.status || 'Unknown'}</span>
+                         </div>
+                         <div class="job-detail">
+                             <strong>Lead Time:</strong> ${job.leadTime || 'N/A'} days
+                         </div>
+                         <div class="job-detail">
+                             <strong>Cost:</strong> $${parseFloat(job.cost || 0).toFixed(2)}
+                         </div>
+                         <div class="job-detail">
+                             <strong>Quote:</strong> $${parseFloat(job.quote || 0).toFixed(2)}
+                         </div>
+                     </div>
+                     ${supplierInfo}
+                     <div class="job-detail">
+                         <strong>Project Info:</strong> ${job.projectInfo || 'No description available'}
+                     </div>
+                 </div>
+             `;
+         }
+
+        // Get status class for styling
+        function getStatusClass(status) {
+            if (!status) return '';
+            
+            const statusLower = status.toLowerCase();
+            if (statusLower.includes('po')) return 'status-po';
+            if (statusLower.includes('rfq')) return 'status-rfq';
+            if (statusLower.includes('urgent')) return 'status-urgent';
+            if (statusLower.includes('outsource')) return 'status-outsource';
+            if (statusLower.includes('finished')) return 'status-finished';
+            if (statusLower.includes('completed')) return 'status-completed';
+            
+            return '';
+        }
+
+        // Search functionality
+        searchSupplierInput.addEventListener('input', () => {
+            const searchTerm = searchSupplierInput.value.toLowerCase();
+            const supplierCards = document.querySelectorAll('.supplier-card');
+            
+            supplierCards.forEach(card => {
+                const supplierName = card.querySelector('.supplier-name').textContent.toLowerCase();
+                if (supplierName.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

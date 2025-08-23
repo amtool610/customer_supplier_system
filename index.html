@@ -305,6 +305,7 @@
         </div>
         <div id="main-app" style="display: none;">
             <button id="logout-btn">Logout</button>
+            <button id="supplier-dashboard-btn" style="background-color: #2ecc71;">Supplier Dashboard</button>
             <h2>Search Purchase Orders</h2>
             <input type="text" id="search-input" placeholder="Search...">
             <div id="search-results"></div>
@@ -461,6 +462,7 @@ const toggleCustomerChartBtn = document.getElementById('toggle-customer-chart');
 const toggleCompanyChartBtn = document.getElementById('toggle-company-chart');
 const chartContainer = document.getElementById('chart-container');
 const companyChartContainer = document.getElementById('company-chart-container');
+const supplierDashboardBtn = document.getElementById('supplier-dashboard-btn');
 
 // Initially hide the project list
 projectList.style.display = 'none';
@@ -916,7 +918,7 @@ async function updateCustomerChart() {
             const customerTotals = {};
             querySnapshot.forEach(doc => {
                 const project = doc.data();
-                const customerName = project.customerName;
+                const customerName = project.customerName || 'Unknown Customer';
                 const quote = parseFloat(project.quote) || 0;
                 
                 if (customerTotals[customerName]) {
@@ -926,10 +928,11 @@ async function updateCustomerChart() {
                 }
             });
 
-            // Sort and get top 10 customers
+            // Sort and get top 20 customers
             const sortedCustomers = Object.entries(customerTotals)
+                .filter(([name, total]) => name && name.trim() !== '' && total > 0) // Filter out empty names and zero totals
                 .sort(([,a], [,b]) => b - a)
-                .slice(0, 10);
+                .slice(0, 20);
 
             const labels = sortedCustomers.map(([name]) => name);
             const data = sortedCustomers.map(([,total]) => total);
@@ -977,7 +980,7 @@ async function updateCustomerChart() {
                         },
                         title: {
                             display: true,
-                            text: 'Top 10 Customers by Total Quotes'
+                            text: 'Top 20 Customers by Total Quotes'
                         }
                     }
                 }
@@ -1000,7 +1003,7 @@ async function updateCompanyChart() {
             const companyTotals = {};
             querySnapshot.forEach(doc => {
                 const project = doc.data();
-                const companyName = project.companyName;
+                const companyName = project.companyName || 'Unknown Company';
                 // Skip if company name is undefined, null, empty, or 'Unknown'
                 if (!companyName || companyName.trim() === '' || companyName.toLowerCase() === 'unknown') {
                     return;
@@ -1014,10 +1017,11 @@ async function updateCompanyChart() {
                 }
             });
 
-            // Sort and get top 10 companies
+            // Sort and get top 20 companies
             const sortedCompanies = Object.entries(companyTotals)
+                .filter(([name, total]) => name && name.trim() !== '' && total > 0) // Filter out empty names and zero totals
                 .sort(([,a], [,b]) => b - a)
-                .slice(0, 10);
+                .slice(0, 20);
 
             const labels = sortedCompanies.map(([name]) => name);
             const data = sortedCompanies.map(([,total]) => total);
@@ -1066,7 +1070,7 @@ async function updateCompanyChart() {
                         },
                         title: {
                             display: true,
-                            text: 'Top 10 Companies by Total Quotes'
+                            text: 'Top 20 Companies by Total Quotes'
                         }
                     }
                 }
@@ -1118,6 +1122,11 @@ toggleCompanyChartBtn.addEventListener('click', () => {
         companyChartContainer.style.display = 'none';
         toggleCompanyChartBtn.textContent = 'Show Company Chart';
     }
+});
+
+// Supplier dashboard navigation
+supplierDashboardBtn.addEventListener('click', () => {
+    window.location.href = 'suppliers.html';
 });
     </script>
 </body>
