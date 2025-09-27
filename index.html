@@ -467,6 +467,119 @@ const supplierDashboardBtn = document.getElementById('supplier-dashboard-btn');
 // Initially hide the project list
 projectList.style.display = 'none';
 
+// ---------- PAGINATION HELPER FUNCTIONS ----------
+function paginate(items, currentPage = 1, pageSize = 9) {
+    const totalPages = Math.ceil(items.length / pageSize);
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const pageItems = items.slice(startIndex, endIndex);
+    return { pageItems, totalPages };
+}
+
+function createPaginationControls(container, totalPages, currentPage, onPageChange) {
+    const paginationContainer = document.createElement('div');
+    paginationContainer.classList.add('pagination-container');
+    paginationContainer.innerHTML = '';
+
+    for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.style.margin = '0 5px';
+        btn.style.padding = '5px 10px';
+        if (i === currentPage) btn.style.backgroundColor = '#3498db';
+        btn.addEventListener('click', () => onPageChange(i));
+        paginationContainer.appendChild(btn);
+    }
+
+    container.appendChild(paginationContainer);
+}
+
+// ---------- RENDER LISTS WITH PAGINATION ----------
+function renderListWithPagination(listElement, items) {
+    const pageSize = 9;
+    let currentPage = 1;
+
+    function renderPage(pageNum) {
+        listElement.innerHTML = '';
+        const { pageItems, totalPages } = paginate(items, pageNum, pageSize);
+        pageItems.forEach(item => listElement.appendChild(item));
+        createPaginationControls(listElement, totalPages, pageNum, renderPage);
+    }
+
+    renderPage(currentPage);
+}
+
+// ---------- LOAD PROJECTS MODIFIED FOR PAGINATION ----------
+async function loadProjects() {
+    // Clear all lists
+    [projectList, urgentList, outsourceList, archiveList, rfqList, allList].forEach(list => list.innerHTML = '');
+    let totalQuotes = 0;
+    let totalEarnings = 0;
+    try {
+        const user = auth.currentUser;
+        if (user) {
+            const q = query(collection(db, 'projects'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+
+            const projectItems = [];
+            const purchaseItems = [];
+            const urgentItems = [];
+            const outsourceItems = [];
+            const archiveItems = [];
+            const rfqItems = [];
+
+            querySnapshot.forEach(doc => {
+                const project = doc.data();
+                const projectItem = document.createElement('div');
+                projectItem.classList.add('project-item');
+                const date = project.createdAt ? project.createdAt.toDate() : null;
+                const formattedDate = date ? date.toLocaleDateString() : 'N/A';
+
+                projectItem.innerHTML = `
+                    <h3>${project.customerName}</h3>
+                    <p><strong>Company:</strong> ${project.companyName}</p>
+                    <p><strong>Info:</strong> ${project.projectInfo}</p>
+                    <p><strong>Supplier:</strong> ${project.supplierName}</p>
+                    <p><strong>Status:</strong> ${project.status}</p>
+                    <p><strong>Lead Time:</strong> ${project.leadTime} days</p>
+                    <p><strong>Cost:</strong> ${project.cost}</p>
+                    <p><strong>Quote:</strong> ${project.quote}</p>
+                    <p><strong>Created At:</strong> ${formattedDate}</p>
+                    <div class="button-group">
+                        <button data-id="${doc.id}" class="edit-btn">Edit</button>
+                        <button data-id="${doc.id}" class="delete-btn">Delete</button>
+                    </div>
+                `;
+
+                projectItems.push(projectItem.cloneNode(true)); // All orders
+                if (project.status.toLowerCase().includes('po')) purchaseItems.push(projectItem.cloneNode(true));
+                if (project.leadTime < 7) urgentItems.push(projectItem.cloneNode(true));
+                if (project.status.toLowerCase().includes('outsource')) outsourceItems.push(projectItem.cloneNode(true));
+                if (project.status.toLowerCase().includes('finished') || project.status.toLowerCase().includes('completed')) archiveItems.push(projectItem.cloneNode(true));
+                if (project.status.toLowerCase().includes('rfq')) rfqItems.push(projectItem.cloneNode(true));
+
+                totalQuotes += parseFloat(project.quote || 0);
+                totalEarnings += (parseFloat(project.quote || 0) - parseFloat(project.cost || 0));
+            });
+
+            // Render all lists with pagination
+            renderListWithPagination(allList, projectItems);
+            renderListWithPagination(projectList, purchaseItems);
+            renderListWithPagination(urgentList, urgentItems);
+            renderListWithPagination(outsourceList, outsourceItems);
+            renderListWithPagination(archiveList, archiveItems);
+            renderListWithPagination(rfqList, rfqItems);
+
+            totalQuotesDisplay.textContent = totalQuotes.toFixed(2);
+            totalEarningsDisplay.textContent = totalEarnings.toFixed(2);
+
+            await Promise.all([updateCustomerChart(), updateCompanyChart()]);
+        }
+    } catch (error) {
+        console.error("Error loading projects:", error);
+    }
+}
+
 // Add event listener to toggle project list visibility
 toggleProjectListBtn.addEventListener('click', () => {
     if (projectList.style.display === 'none') {
@@ -577,90 +690,6 @@ logoutBtn.addEventListener('click', async () => {
 });
 
 // Load projects from Firestore
-async function loadProjects() {
-    projectList.innerHTML = '';
-    urgentList.innerHTML = '';
-    outsourceList.innerHTML = '';
-    archiveList.innerHTML = '';
-    rfqList.innerHTML = '';
-    allList.innerHTML = '';
-    let totalQuotes = 0;
-    let totalEarnings = 0;
-    try {
-        const user = auth.currentUser;
-        if (user) {
-            const q = query(collection(db, 'projects'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
-            const querySnapshot = await getDocs(q);
-            querySnapshot.forEach(doc => {
-                const project = doc.data();
-                const projectItem = document.createElement('div');
-                projectItem.classList.add('project-item');
-                const date = project.createdAt ? project.createdAt.toDate() : null;
-                const formattedDate = date ? date.toLocaleDateString() : 'N/A';
-                
-                const projectHTML = `
-                    <h3>${project.customerName}</h3>
-                    <p><strong>Company:</strong> ${project.companyName}</p>
-                    <p><strong>Info:</strong> ${project.projectInfo}</p>
-                    <p><strong>Supplier:</strong> ${project.supplierName}</p>
-                    <p><strong>Status:</strong> ${project.status}</p>
-                    <p><strong>Lead Time:</strong> ${project.leadTime} days</p>
-                    <p><strong>Cost:</strong> ${project.cost}</p>
-                    <p><strong>Quote:</strong> ${project.quote}</p>
-                    <p><strong>Created At:</strong> ${formattedDate}</p>
-                    <div class="button-group">
-                        <button data-id="${doc.id}" class="edit-btn">Edit</button>
-                        <button data-id="${doc.id}" class="delete-btn">Delete</button>
-                    </div>
-                `;
-                
-                projectItem.innerHTML = projectHTML;
-                
-                // Add to all list without any conditions
-                allList.appendChild(projectItem.cloneNode(true));
-
-                // Only add to purchase orders if status contains 'po'
-                if (project.status.toLowerCase().includes('po')) {
-                    projectList.appendChild(projectItem.cloneNode(true));
-                }
-
-                // Check if project is urgent (less than 7 days)
-                if (project.leadTime < 7) {
-                    urgentList.appendChild(projectItem.cloneNode(true));
-                }
-
-                // Check if project status is outsource
-                if (project.status.toLowerCase().includes('outsource')) {
-                    outsourceList.appendChild(projectItem.cloneNode(true));
-                }
-
-                // Check if project status is finished/completed
-                if (project.status.toLowerCase().includes('finished') || 
-                    project.status.toLowerCase().includes('completed')) {
-                    archiveList.appendChild(projectItem.cloneNode(true));
-                }
-
-                // Check if project status contains 'rfq'
-                if (project.status.toLowerCase().includes('rfq')) {
-                    rfqList.appendChild(projectItem.cloneNode(true));
-                }
-
-                totalQuotes += parseFloat(project.quote || 0);
-                totalEarnings += (parseFloat(project.quote || 0) - parseFloat(project.cost || 0));
-            });
-        }
-        totalQuotesDisplay.textContent = totalQuotes.toFixed(2);
-        totalEarningsDisplay.textContent = totalEarnings.toFixed(2);
-        
-        // Make sure both charts are updated
-        await Promise.all([
-            updateCustomerChart(),
-            updateCompanyChart()
-        ]);
-    } catch (error) {
-        console.error("Error loading projects:", error);
-    }
-}
 
 // Add new project
 addProjectForm.addEventListener('submit', async (e) => {
